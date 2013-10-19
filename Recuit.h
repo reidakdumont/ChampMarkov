@@ -26,6 +26,7 @@ class Recuit
         double getInitialTemp(double tau0);
         void swp(int var, int valeur);
         double cost();
+        void draw();
     protected:
     private:
     	vector<int> line;

@@ -25,16 +25,38 @@ double Recuit::cost()
 	for (int i = 0; i < this->line.size(); i++)
 	{
 		cv::Vec3b pix = image.at<cv::Vec3b>(this->line.at(i), i);
-		if (pix.val[0] != 0 || pix.val[1] != 0 || pix.val[2] != 0)
+		//std::cout << "(" << pix.val[0] << "," << pix.val[1] << "," << pix.val[2] << ")" << std::endl;
+		if (pix.val[0] != 255 && pix.val[1] != 255 && pix.val[2] != 255)
 			cost = cost + 1;
 	}
+	for (int i = 1; i < this->line.size(); i++)
+	{
+		cost = cost + abs(this->line.at(i-1)-this->line.at(i));
+	}
+	cost = cost + abs(this->pt.x - this->line.at(1));
 	return cost;
 }
 
 void Recuit::swp(int var, int valeur)
 {
 	int val = this->line.at(var);
-	this->line.at(var) = val + valeur;
+	if (val + valeur < this->image.rows && val + valeur >= 0)
+		this->line.at(var) = val + valeur;
+}
+
+void Recuit::draw()
+{
+	cv::Mat temp;
+	this->image.copyTo(temp);
+	for (int i = 0; i < this->line.size(); i++)
+	{
+		cv::Vec3b pix = temp.at<cv::Vec3b>(this->line.at(i),i);
+		pix.val[0] = 0;
+		pix.val[1] = 0;
+		pix.val[2] = 255;
+		temp.at<cv::Vec3b>(this->line.at(i),i) = pix;
+	}
+	cv::imwrite("extracted.jpg", temp);
 }
 
 double Recuit::getInitialTemp(double tau0)
@@ -73,8 +95,8 @@ void Recuit::recuit(double tau0)
     std::uniform_int_distribution<int> distrib(0,this->line.size()-1);
     std::uniform_int_distribution<int> dist(-4,4);
     double best_T = 0;
-    for (int h = 0; h < 10; h++)
-    {
+    /*for (int h = 0; h < 10; h++)
+    {*/
         double T0 = this->getInitialTemp(tau0);
         double T = T0;
         std::cout << "T = " << T << std::endl;
@@ -152,6 +174,11 @@ void Recuit::recuit(double tau0)
             std::cout << best_cost << " true" << std::endl;
         else
             std::cout << best_cost << " false" << std::endl;
-    }
+    //}
     this->line = this->sol;
+    std::cout << "end recuit" << std::endl;
+    this->draw();
+    for(int i = 0; i < this->line.size(); i++)
+    	std::cout << "(" << this->line.at(i) << "," << i << ") ";
+    std::cout << std::endl;
 }
