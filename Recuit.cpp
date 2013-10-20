@@ -6,11 +6,16 @@
 
 Recuit::Recuit(char* name, cv::Point2d point)
 {
-	this->image = cv::imread(name);
+	this->image = cv::imread(name,CV_LOAD_IMAGE_COLOR);
 	this->pt = point;
+	std::uniform_int_distribution<int> dist(-4,4);
+	std::default_random_engine generator;
 	for (int i = 0; i < this->image.cols; i++)
 	{
-		this->line.push_back(pt.x);
+		if (i == pt.y)
+			this->line.push_back(pt.x);
+		else
+			this->line.push_back(pt.x+ dist(generator));
 	}
 }
 
@@ -29,11 +34,12 @@ double Recuit::cost()
 		if (pix.val[0] != 255 && pix.val[1] != 255 && pix.val[2] != 255)
 			cost = cost + 1;
 	}
+	
 	for (int i = 1; i < this->line.size(); i++)
 	{
-		cost = cost + abs(this->line.at(i-1)-this->line.at(i));
+		cost = cost + 1.5*abs(this->line.at(i-1)-this->line.at(i));
 	}
-	cost = cost + abs(this->pt.x - this->line.at(1));
+	cost = cost + 0.3*abs(this->pt.x - this->line.at(1));
 	return cost;
 }
 
@@ -50,10 +56,7 @@ void Recuit::draw()
 	this->image.copyTo(temp);
 	for (int i = 0; i < this->line.size(); i++)
 	{
-		cv::Vec3b pix = temp.at<cv::Vec3b>(this->line.at(i),i);
-		pix.val[0] = 0;
-		pix.val[1] = 0;
-		pix.val[2] = 255;
+		cv::Vec3b pix(0,0,255);
 		temp.at<cv::Vec3b>(this->line.at(i),i) = pix;
 	}
 	cv::imwrite("extracted.jpg", temp);
@@ -167,7 +170,7 @@ void Recuit::recuit(double tau0)
             accept = 0;
             acceptdelta = 0;
             rnd = 0;
-            if (palierSansAccept == 3)
+            if (palierSansAccept == 10)
                 cont = false;
         }
         if (cont)
