@@ -2,7 +2,7 @@
 
 #define T_INIT 6666666
 #define T_STEP 0.9
-#define T_STOP 0.000001
+#define T_STOP 0.00001
 
 Recuit::Recuit(char* name, cv::Point2d point)
 {
@@ -15,8 +15,15 @@ Recuit::Recuit(char* name, cv::Point2d point)
 		if (i == pt.y)
 			this->line.push_back(pt.x);
 		else
-			this->line.push_back(pt.x+ dist(generator));
+		{
+			cv::Vec3b pix = image.at<cv::Vec3b>(pt.x, i);
+			if (pix.val[0] != 255 && pix.val[1] != 255 && pix.val[2] != 255)
+				this->line.push_back(pt.x+ dist(generator));
+			else
+				this->line.push_back(pt.x);
+		}
 	}
+	this->sol = this->line;
 }
 
 
@@ -27,7 +34,7 @@ Recuit::~Recuit()
 double Recuit::cost()
 {
 	double cost = 0;
-	for (int i = 0; i < this->line.size(); i++)
+	for (unsigned int i = 0; i < this->line.size(); i++)
 	{
 		cv::Vec3b pix = image.at<cv::Vec3b>(this->line.at(i), i);
 		//std::cout << "(" << pix.val[0] << "," << pix.val[1] << "," << pix.val[2] << ")" << std::endl;
@@ -35,9 +42,9 @@ double Recuit::cost()
 			cost = cost + 1;
 	}
 	
-	for (int i = 1; i < this->line.size(); i++)
+	for (unsigned int i = 1; i < this->line.size(); i++)
 	{
-		cost = cost + 1.5*abs(this->line.at(i-1)-this->line.at(i));
+		cost = cost + 10*abs(this->line.at(i-1)-this->line.at(i));
 	}
 	cost = cost + 0.3*abs(this->pt.x - this->line.at(1));
 	return cost;
@@ -54,10 +61,10 @@ void Recuit::draw()
 {
 	cv::Mat temp;
 	this->image.copyTo(temp);
-	for (int i = 0; i < this->line.size(); i++)
+	for (unsigned int i = 0; i < this->sol.size(); i++)
 	{
 		cv::Vec3b pix(0,0,255);
-		temp.at<cv::Vec3b>(this->line.at(i),i) = pix;
+		temp.at<cv::Vec3b>(this->sol.at(i),i) = pix;
 	}
 	cv::imwrite("extracted.jpg", temp);
 }
@@ -66,9 +73,9 @@ double Recuit::getInitialTemp(double tau0)
 {
     double res = 0;
     std::uniform_int_distribution<int> distrib(0,this->line.size()-1);
-    std::uniform_int_distribution<int> dist(-4,4);
+    std::uniform_int_distribution<int> dist(-1,1);
     std::default_random_engine generator;
-    for (int i = 0; i < 100; i++)
+    for (unsigned int i = 0; i < 100; i++)
     {
         double value = dist(generator);
         double var = 0;
@@ -96,8 +103,8 @@ void Recuit::recuit(double tau0)
     std::default_random_engine generator;
     std::uniform_real_distribution<double> distribution(0.0,1.0);
     std::uniform_int_distribution<int> distrib(0,this->line.size()-1);
-    std::uniform_int_distribution<int> dist(-4,4);
-    double best_T = 0;
+    std::uniform_int_distribution<int> dist(-1,1);
+    bool changeInBest = false;
     /*for (int h = 0; h < 10; h++)
     {*/
         double T0 = this->getInitialTemp(tau0);
@@ -133,9 +140,9 @@ void Recuit::recuit(double tau0)
                 cost_j = this->cost();
                 if (cost_j < best_cost)
                 {
-                    best_T = T;
                     best_cost = cost_j;
                     this->sol = this->line;
+                    changeInBest = true;
                 }
                 // Back up best solution
                 delta = cost_j - cost_i;
@@ -160,6 +167,8 @@ void Recuit::recuit(double tau0)
                         this->swp(var, -value);; //Refuse the swap, so we reput the last conﬁguration
                 }
             }
+            if (changeInBest)
+            	draw();
             std::cout << "T : " << T << " , t : " << t << " , nbiter : " << nbiter << " , accept : " << accept << " , acceptdelta : " << acceptdelta << " , moyrnd : " << rnd/(t-accept) << " , best_cost : " << best_cost << std::endl;
             if (accept+acceptdelta == 0)
                 palierSansAccept++;
@@ -170,7 +179,8 @@ void Recuit::recuit(double tau0)
             accept = 0;
             acceptdelta = 0;
             rnd = 0;
-            if (palierSansAccept == 10)
+            changeInBest = false;
+            if (palierSansAccept == 5)
                 cont = false;
         }
         if (cont)
@@ -181,7 +191,7 @@ void Recuit::recuit(double tau0)
     this->line = this->sol;
     std::cout << "end recuit" << std::endl;
     this->draw();
-    for(int i = 0; i < this->line.size(); i++)
+    for(unsigned int i = 0; i < this->line.size(); i++)
     	std::cout << "(" << this->line.at(i) << "," << i << ") ";
     std::cout << std::endl;
 }
