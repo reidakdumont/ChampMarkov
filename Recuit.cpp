@@ -4,7 +4,7 @@
 #define T_STEP 0.9
 #define T_STOP 0.00001
 
-Recuit::Recuit(char* name, cv::Point2d point)
+Recuit::Recuit(char* name, cv::Point2d point, char* output)
 {
 	this->image = cv::imread(name,CV_LOAD_IMAGE_COLOR);
 	this->pt = point;
@@ -24,6 +24,7 @@ Recuit::Recuit(char* name, cv::Point2d point)
 		}
 	}
 	this->sol = this->line;
+	this->out = output;
 }
 
 
@@ -34,6 +35,7 @@ Recuit::~Recuit()
 double Recuit::cost()
 {
 	double cost = 0;
+	int param = 3;
 	for (unsigned int i = 0; i < this->line.size(); i++)
 	{
 		cv::Vec3b pix = image.at<cv::Vec3b>(this->line.at(i), i);
@@ -42,9 +44,10 @@ double Recuit::cost()
 			cost = cost + 1;
 	}
 	
-	for (unsigned int i = 1; i < this->line.size(); i++)
+	for (unsigned int i = param; i < this->line.size()-param; i++)
 	{
-		cost = cost + 10*abs(this->line.at(i-1)-this->line.at(i));
+		for (int j = -param; j < param; j++)
+			cost = cost + 0.5*abs(this->line.at(i-j-1)-this->line.at(i));
 	}
 	cost = cost + 0.3*abs(this->pt.x - this->line.at(1));
 	return cost;
@@ -66,14 +69,14 @@ void Recuit::draw()
 		cv::Vec3b pix(0,0,255);
 		temp.at<cv::Vec3b>(this->sol.at(i),i) = pix;
 	}
-	cv::imwrite("extracted.jpg", temp);
+	cv::imwrite(this->out, temp);
 }
 
 double Recuit::getInitialTemp(double tau0)
 {
     double res = 0;
     std::uniform_int_distribution<int> distrib(0,this->line.size()-1);
-    std::uniform_int_distribution<int> dist(-1,1);
+    std::uniform_int_distribution<int> dist(-2,2);
     std::default_random_engine generator;
     for (unsigned int i = 0; i < 100; i++)
     {
@@ -103,7 +106,7 @@ void Recuit::recuit(double tau0)
     std::default_random_engine generator;
     std::uniform_real_distribution<double> distribution(0.0,1.0);
     std::uniform_int_distribution<int> distrib(0,this->line.size()-1);
-    std::uniform_int_distribution<int> dist(-1,1);
+    std::uniform_int_distribution<int> dist(-2,2);
     bool changeInBest = false;
     /*for (int h = 0; h < 10; h++)
     {*/

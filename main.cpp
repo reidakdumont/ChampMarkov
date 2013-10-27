@@ -36,12 +36,8 @@ int rand_a_b(int a, int b){
 
 int main(int argc, char** argv)
 {
-	std::vector<cv::Point2d> tab = readfile(argv[2]);
-	std::uniform_int_distribution<int> dist(0,tab.size());
-	std::default_random_engine generator;
-	int nb = rand_a_b(0,tab.size());
-	std::cout << tab.size() << " " << nb << std::endl;
-	Recuit r(argv[1], tab.at(nb));
+	cv::Point2d pt(atoi(argv[2]),atoi(argv[3]));
+	Recuit r(argv[1], pt, argv[4]);
 	r.draw();
 	r.recuit(0.5);
 }

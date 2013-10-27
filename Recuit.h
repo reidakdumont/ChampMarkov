@@ -20,7 +20,7 @@ using namespace std;
 class Recuit
 {
     public:
-        Recuit(char* name, cv::Point2d point);
+        Recuit(char* name, cv::Point2d point, char* output);
         virtual ~Recuit();
         void recuit(double tau0);
         double getInitialTemp(double tau0);
@@ -33,6 +33,7 @@ class Recuit
     	cv::Mat image;
     	vector<int> sol;
     	cv::Point2d pt;
+    	char* out;
 
 };
 
