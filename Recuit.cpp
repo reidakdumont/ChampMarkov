@@ -7,9 +7,7 @@
 Recuit::Recuit(char* name, cv::Point2d point, char* output)
 {
 	this->image = cv::imread(name,CV_LOAD_IMAGE_COLOR);
-	this->pt = point;
-	std::uniform_int_distribution<int> dist(-5,5);
-	std::default_random_engine generator;
+    this->pt = point;
 	for (int i = 0; i < this->image.cols; i++)
 	{
 		if (i == pt.y)
@@ -17,10 +15,27 @@ Recuit::Recuit(char* name, cv::Point2d point, char* output)
 		else
 		{
 			cv::Vec3b pix = image.at<cv::Vec3b>(pt.x, i);
+            int p = 0;
 			if (pix.val[0] != 255 && pix.val[1] != 255 && pix.val[2] != 255)
-                this->line.push_back(getWhitePoint(i));
+            {
+                int whitepoint = getWhitePoint(i);
+                if (whitepoint == -1)
+                {
+                    p = pt.x;
+                }
+                else
+                {
+                    p = whitepoint;
+                }
+            }
 			else
-				this->line.push_back(pt.x);
+                p = pt.x;
+            if (i > 0 && abs(p-this->line.at(i-1))  < 5)
+                this->line.push_back(p);
+            else if (i > 0)
+                this->line.push_back(this->line.at(i-1));
+            else
+                this->line.push_back(pt.x);
 		}
 	}
     this->marge = max(getLineMarge(),20);
@@ -57,7 +72,7 @@ int Recuit::getLineMarge()
             margedown = count;
         }
     }
-    if (abs(pt.x-margeup) > abs(pt.x-margedown))
+    if (margeup > margedown)
         marge = margeup;
     else
         marge = margedown;
@@ -66,7 +81,7 @@ int Recuit::getLineMarge()
 
 int Recuit::getWhitePoint(int col)
 {
-    int line = pt.x;
+    int line = -1;
     bool cont = true;
     int lineup = 0;
     int linedown = 0;
@@ -115,7 +130,6 @@ double Recuit::cost(double* col, double* decalage, bool firstpart)
         for (unsigned int i = 0; i < pt.y; i++)
         {
             cv::Vec3b pix = image.at<cv::Vec3b>(this->line.at(i), i);
-            //std::cout << "(" << pix.val[0] << "," << pix.val[1] << "," << pix.val[2] << ")" << std::endl;
             if (pix.val[0] != 255 && pix.val[1] != 255 && pix.val[2] != 255)
                 *col = *col + 7;
         }
@@ -134,7 +148,6 @@ double Recuit::cost(double* col, double* decalage, bool firstpart)
         for (unsigned int i = pt.y; i < this->line.size(); i++)
         {
             cv::Vec3b pix = image.at<cv::Vec3b>(this->line.at(i), i);
-            //std::cout << "(" << pix.val[0] << "," << pix.val[1] << "," << pix.val[2] << ")" << std::endl;
             if (pix.val[0] != 255 && pix.val[1] != 255 && pix.val[2] != 255)
                 *col = *col + 7;
         }
@@ -143,7 +156,7 @@ double Recuit::cost(double* col, double* decalage, bool firstpart)
         for (unsigned int i = pt.y+param+1; i < this->line.size()-param; i++)
         {
             for (int j = -param; j <= param; j++)
-                *decalage = *decalage + 4*abs(this->line.at(i-j-1)-this->line.at(i));
+                *decalage = *decalage + /*4**/abs(this->line.at(i-j-1)-this->line.at(i));
         }
         cost = cost + *decalage;
         cost = cost + 5*abs(this->pt.x - this->line.at(this->line.size()-1));
@@ -291,7 +304,11 @@ void recuitThread(Recuit* rec, bool firstpart)
         }
         if (changeInBest)
             rec->draw();
-        std::cout << "T : " << T << " , t : " << t << " , nbiter : " << nbiter << " , accept : " << accept << " , acceptdelta : " << acceptdelta << " , best_col : " << best_col << " , best_decalage : "<< best_decalage << " , best_cost : " << best_cost << std::endl;
+        std::cout << "T : " << T << " , t : " << t << " , nbiter : " << nbiter << " , accept : " << accept << " , acceptdelta : " << acceptdelta << " , best_col : " << best_col << " , best_decalage : "<< best_decalage << " , best_cost : " << best_cost;
+        if (firstpart)
+            std::cout << " , firstpart" << std::endl;
+        else
+            std::cout << " , secondpart" << std::endl;
         if (accept+acceptdelta == 0)
             palierSansAccept++;
         else
@@ -305,6 +322,10 @@ void recuitThread(Recuit* rec, bool firstpart)
         if (palierSansAccept == 5)
             cont = false;
     }
+    if (firstpart)
+        std::cout << "firstpart ";
+    else
+        std::cout << "secondpart ";
     if (cont)
         std::cout << best_cost << " true" << std::endl;
     else
